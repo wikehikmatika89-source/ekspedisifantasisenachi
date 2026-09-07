@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aethelgard: Lentera Jiwa yang Hilang</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #050508;
+      color: #d1d5db;
+      font-family: 'Georgia', serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .game-card {
+      background: #0f0f17;
+      border: 1px solid #2a2a3c;
+      border-radius: 12px;
+      max-width: 800px;
+      width: 100%;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 15px rgba(147, 51, 234, 0.15);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Status Bar Header */
+    .status-bar {
+      background: #181824;
+      border-bottom: 1px solid #2a2a3c;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .character-info h2 {
+      color: #c084fc;
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 20px;
+      font-size: 0.95rem;
+    }
+
+    .stat-badge {
+      background: #09090e;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #3b3b54;
+    }
+
+    .hp-text { color: #ef4444; font-weight: bold; }
+    .inv-text { color: #38bdf8; }
+
+    /* Scene Visual Canvas */
+    .visual-frame {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      background-color: #000;
+      overflow: hidden;
+    }
+
+    .scene-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    .location-overlay {
+      position: absolute;
+      bottom: 12px;
+      left: 15px;
+      background: rgba(0, 0, 0, 0.75);
+      padding: 6px 14px;
+      border-radius: 4px;
+      border-left: 3px solid #c084fc;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Content Area */
+    .content-area {
+      padding: 25px;
+    }
+
+    .prompt-box {
+      background: #09090e;
+      border: 1px dashed #4b5563;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 20px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    .prompt-title {
+      color: #f59e0b;
+      font-weight: bold;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .narrative {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: #e5e7eb;
+      margin-bottom: 25px;
+    }
+
+    .narrative p {
+      margin-bottom: 12px;
+    }
+
+    /* Choices Button Container */
+    .choices-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .choice-btn {
+      background: #1e1e2d;
+      color: #e2e8f0;
+      border: 1px solid #3f3f5a;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .choice-btn:hover {
+      background: #c084fc;
+      color: #0f0f17;
+      border-color: #c084fc;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(192, 132, 252, 0.3);
+    }
+
+    .audio-control {
+      position: absolute;
+      top: 12px;
+      right: 15px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid #4b5563;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-card">
+  <div class="status-bar">
+    <div class="character-info">
+      <h2>ELDRIN <span style="font-size: 0.8rem; color: #6b7280;">(SPELLBLADE)</span></h2>
+    </div>
+    <div class="stats">
+      <div class="stat-badge">HP: <span id="hp-display" class="hp-text">100/100</span></div>
+      <div class="stat-badge">Inventory: <span id="inv-display" class="inv-text">Pedang Sihir, Potion Pemulih (1)</span></div>
+    </div>
+  </div>
+
+  <div class="visual-frame">
+    <img id="scene-image" class="scene-img" src="" alt="Scene Visual">
+    <div id="location-display" class="location-overlay">Gerbang Hutan Bayangan Kelam</div>
+    <button id="audio-btn" class="audio-control" onclick="toggleAudio()">🔊 Suara On/Off</button>
+  </div>
+
+  <div class="content-area">
+    <div class="prompt-box">
+      <span class="prompt-title">[DESKRIPSI VISUAL PROMPT - MIDJOURNEY/DALL-E]</span>
+      <code id="prompt-display">Generating prompt...</code>
+    </div>
+
+    <div id="narrative-display" class="narrative">
+      </div>
+
+    <div id="choices-display" class="choices-grid">
+      </div>
+  </div>
+</div>
+
+<script>
+  // Game State
+  let gameState = {
+    hp: 100,
+    maxHp: 100,
+    inventory: ["Pedang Sihir", "Potion Pemulih (1)"],
+    location: "Gerbang Hutan Bayangan Kelam",
+    audioEnabled: false
+  };
+
+  // Web Audio Synthesizer (Generates dark fantasy atmosphere sound effects without external files)
+  let audioCtx = null;
+  let ambientOsc = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  function playSoundEffect(type) {
+    if (!audioCtx || !gameState.audioEnabled) return;
+    
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'action') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.3);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (type === 'magic') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.5);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else if (type === 'heal') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(330, now);
+      osc.frequency.exponentialRampToValueAtTime(660, now + 0.6);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    }
+  }
+
+  function playAmbientDrone() {
+    if (!audioCtx || !gameState.audioEnabled) return;
+    if (ambientOsc) ambientOsc.stop();
+
+    ambientOsc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    ambientOsc.type = 'sawtooth';
+    ambientOsc.frequency.setValueAtTime(55, audioCtx.currentTime); // Low A note
+    
+    // Lowpass filter for dark drone sound
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(200, audioCtx.currentTime);
+
+    ambientOsc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    ambientOsc.start();
+  }
+
+  function toggleAudio() {
+    initAudio();
+    gameState.audioEnabled = !gameState.audioEnabled;
+    const btn = document.getElementById('audio-btn');
+    if (gameState.audioEnabled) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      playAmbientDrone();
+      btn.innerText = "🔊 Suara: ON";
+    } else {
+      if (ambientOsc) ambientOsc.stop();
+      btn.innerText = "🔇 Suara: OFF";
+    }
+  }
+
+  // Story Nodes Data
+  const storyNodes = {
+    start: {
+      location: "Gerbang Hutan Bayangan Kelam",
+      image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, Eldrin a young spellblade standing at the entrance of a dark haunted forest at twilight, glowing magical sword in hand, ethereal purple fog, ancient stone archway covered in runes, cinematic lighting, highly detailed, Unreal Engine 5 render style --ar 16:9",
+      narrative: [
+        "Matahari terbenam di balik cakrawala Aethelgard, memancarkan warna jingga keunguan yang pudar. Eldrin berdiri tegap di hadapan gerbang batu kuno Hutan Bayangan Kelam. Pohon-pohon raksasa dengan dahan meliuk seperti jemari raksasa menyelimuti jalur di depan dalam kegelapan abadi.",
+        "Kompas sihir di genggaman Eldrin berputar liar sebelum akhirnya menunjuk lurus ke jantung hutan, tempat *Reruntuhan Altar Jiwa* berada. Tiba-tiba, bisikan ghaib terdengar dari dalam semak-semak, diiringi sepasang mata merah menyala yang mengawasi dari balik kegelapan.",
+        "Ini adalah rintangan pertama Anda. Kehadiran makhluk misterius menghalangi jalan masuk utama ke dalam hutan."
+      ],
+      choices: [
+        {
+          text: "⚔️ Cabut Pedang Sihir dan tebas semak-semak tersebut.",
+          sfx: "action",
+          nextNode: "fightGate"
+        },
+        {
+          text: "✨ Salurkan sihir ke Kompas untuk mendeteksi aura makhluk itu.",
+          sfx: "magic",
+          nextNode: "scanGate"
+        },
+        {
+          text: "🧪 Gunakan Potion Pemulih untuk memulihkan stamina sebelum bertindak.",
+          sfx: "heal",
+          nextNode: "usePotionStart",
+          condition: () => gameState.inventory.includes("Potion Pemulih (1)")
+        }
+      ]
+    },
+
+    usePotionStart: {
+      location: "Gerbang Hutan Bayangan Kelam",
+      image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, close up of a magical glowing health potion bottle being consumed by a spellblade warrior, soft red magical aura, high detail, Unreal Engine 5 --ar 16:9",
+      narrative: [
+        "Eldrin meneguk Potion Pemulih. Cairan merah hangat mengalir ke tubuhnya, memperkuat pertahanan fisiknya serta memberikan energi sihir tambahan.",
+        "Kini tubuh terasa lebih siap menanggapi bahaya yang mengintai di balik semak-semak."
+      ],
+      action: () => {
+        gameState.hp = Math.min(100, gameState.hp + 20);
+        gameState.inventory = gameState.inventory.filter(i => !i.startsWith("Potion Pemulih"));
+      },
+      choices: [
+        { text: "⚔️ Sekarang, cabut Pedang Sihir dan serang!", sfx: "action", nextNode: "fightGate" },
+        { text: "✨ Gunakan sihir Kompas untuk analisis lingkungan.", sfx: "magic", nextNode: "scanGate" }
+      ]
+    },
+
+    fightGate: {
+      location: "Jalur Utama Hutan",
+      image: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, Eldrin fighting a shadow panther with glowing red eyes in a foggy dark forest, blue magic trail from sword swing, dynamic action pose, cinematic lighting, Unreal Engine 5 style --ar 16:9",
+      narrative: [
+        "Dengan kilatan cahaya biru dari Pedang Sihir, Eldrin menerjang ke depan! Seekor *Shadow Panther*—makhluk pemangsa berbulu kegelapan—melompat keluar sambil menggeram keras.",
+        "Bilah pedang Eldrin berhasil melukai bahu makhluk itu, tetapi cakar tajam Panther sempat menggores dada Eldrin sebelum makhluk itu melarikan diri ke dalam kegelapan hutan (HP -15).",
+        "Jalan masuk kini terbuka, namun Anda memasuki area yang lebih dalam: *Rawa Bayangan Tengkorak*."
+      ],
+      action: () => { gameState.hp -= 15; },
+      choices: [
+        { text: "🏃 Lanjutkan perjalanan menyusuri rawa beracun.", sfx: "action", nextNode: "swampPath" },
+        { text: "🔍 Cari jejak darah Shadow Panther untuk mengambil material sihir.", sfx: "action", nextNode: "trackPanther" }
+      ]
+    },
+
+    scanGate: {
+      location: "Gerbang Hutan Bayangan Kelam",
+      image: "https://images.unsplash.com/photo-1514539079130-25950c84af65?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, magical compass emitting pulse wave of golden light revealing invisible phantom beast in forest fog, spellblade holding compass, intricate spell runes, cinematic Unreal Engine 5 --ar 16:9",
+      narrative: [
+        "Eldrin membisikkan mantra kuno ke Kompas Sihir. Gelombang cahaya emas memancar keluar, menyingkap sosok *Shadow Panther* yang berniat menyergap dari samping.",
+        "Karena posisi terdeteksi dan kejutan hilang, makhluk itu melangkah mundur dan menghilang ke dalam kabut tanpa menyerang. Eldrin berhasil melewati gerbang tanpa terluka sedikit pun!",
+        "Kini Eldrin berdiri di persimpangan *Rawa Bayangan Tengkorak*."
+      ],
+      choices: [
+        { text: "🚶 Melangkah maju memasuki area Rawa Bayangan.", sfx: "action", nextNode: "swampPath" }
+      ]
+    },
+
+    trackPanther: {
+      location: "Sarang Shadow Panther",
+      image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, glowing crystal herb found inside a dark cave lair of shadow beast, ethereal light, highly detailed, Unreal Engine 5 --ar 16:9",
+      narrative: [
+        "Eldrin mengikuti bercak darah ajaib hingga ke sarang tersembunyi. Di sana, makhluk itu telah pergi, namun Eldrin menemukan *Bunga Kristal Jiwa* yang sangat langka memancar di antara bebatuan.",
+        "Item ini ditambahkan ke dalam Inventory Anda!"
+      ],
+      action: () => {
+        if(!gameState.inventory.includes("Bunga Kristal Jiwa")) {
+          gameState.inventory.push("Bunga Kristal Jiwa");
+        }
+      },
+      choices: [
+        { text: "🗺️ Kembali ke rute utama menuju Rawa Bayangan.", sfx: "action", nextNode: "swampPath" }
+      ]
+    },
+
+    swampPath: {
+      location: "Rawa Bayangan Tengkorak",
+      image: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, spellblade walking through a spooky swamp filled with glowing green poisonous gas and floating ancient ruins, moonlight shining through dead trees, cinematic Unreal Engine 5 --ar 16:9",
+      narrative: [
+        "Udara di Rawa Bayangan terasa berat dan beracun. Gas hijau pudar mengepul dari permukaan air rawa yang tenang namun mematikan. Di kejauhan, terlihat puncak *Reruntuhan Altar Jiwa* tersinari cahaya bulan.",
+        "Di hadapan Eldrin, terdapat sebuah jembatan kayu lapuk yang digantung tali sihir, serta rute melingkar melewati batuan terjal beracun.",
+        "Tiba-tiba, kabut hijau mulai mengepung lokasi tempat Anda berdiri!"
+      ],
+      choices: [
+        { text: "🌉 Lari menyeberangi jembatan kayu lapuk.", sfx: "action", nextNode: "bridgeCross" },
+        { text: "🔮 Gunakan Pedang Sihir untuk menebas dan membakar gas beracun.", sfx: "magic", nextNode: "burnGas" }
+      ]
+    },
+
+    bridgeCross: {
+      location: "Jembatan Lapuk Rawa",
+      image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, ancient rope bridge collapsing over swamp, spellblade leaping across gaps with glowing blue sword, dramatic action, cinematic lighting, Unreal Engine 5 --ar 16:9",
+      narrative: [
+        "Papan kayu patah di bawah pijakan Eldrin! Dengan refleks seorang Spellblade, Eldrin melompat maju saat jembatan mulai runtuh ke dalam air rawa beracun.",
+        "Eldrin berhasil mendarat di seberang dengan selamat dan berada tepat di gerbang *Reruntuhan Altar Jiwa*!"
+      ],
+      choices: [
+        { text: "🏛️ Masuk ke Altar Jiwa untuk mencari Lentera Jiwa.", sfx: "action", nextNode: "altarFinal" }
+      ]
+    },
+
+    burnGas: {
+      location: "Tepi Rawa Bayangan",
+      image: "https://images.unsplash.com/photo-1514539079130-25950c84af65?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, spellblade channeling arcana magic into sword causing a wave of blue fire purifying swamp poison gas, cinematic lighting, Unreal Engine 5 --ar 16:9",
+      narrative: [
+        "Eldrin mengalirkan elemen petir dan api ke bilah pedangnya. Satu tebasan menciptakan gelombang pemurni sihir yang membakar seluruh gas beracun di area sekitar.",
+        "Jalan menjadi bersih dan aman. Eldrin melangkah anggun menuju struktur kuno di depan."
+      ],
+      choices: [
+        { text: "🏛️ Dekati Altar Jiwa.", sfx: "action", nextNode: "altarFinal" }
+      ]
+    },
+
+    altarFinal: {
+      location: "Reruntuhan Altar Jiwa",
+      image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop",
+      prompt: "Dark fantasy digital art, inside an ancient ruin temple, a glowing blue magical lantern sitting on an ornate altar, spellblade reaching out to it, mystical rays of light, highly detailed, Unreal Engine 5 --ar 16:9",
+      narrative: [
+        "Eldrin akhirnya melangkah ke dalam pilar-pilar batu Altar Jiwa. Di pusat ruangan, melayang sebuah artefak kuno yang memancarkan aura biru kosmik: **Lentera Jiwa**.",
+        "Saat tangan Eldrin menyentuh gagang lentera, kegelapan di Hutan Bayangan Kelam seketika sirna. Energi keajaiban Aethelgard kembali pulih!",
+        "Selamat! Anda telah berhasil menyelesaikan Misi Utama Eldrin!"
+      ],
+      choices: [
+        { text: "🔄 Mainkan Lagi dari Awal", sfx: "action", nextNode: "restart" }
+      ]
+    }
+  };
+
+  // Render Engine Functions
+  function updateUI(nodeKey) {
+    if (nodeKey === 'restart') {
+      gameState.hp = 100;
+      gameState.inventory = ["Pedang Sihir", "Potion Pemulih (1)"];
+      nodeKey = 'start';
+    }
+
+    const node = storyNodes[nodeKey];
+
+    // Execute node action if present
+    if (node.action) {
+      node.action();
+    }
+
+    // Update Status Bar
+    document.getElementById('hp-display').innerText = `${gameState.hp}/${gameState.maxHp}`;
+    document.getElementById('inv-display').innerText = gameState.inventory.join(', ');
+    document.getElementById('location-display').innerText = node.location;
+
+    // Update Visual Frame & Prompt
+    document.getElementById('scene-image').src = node.image;
+    document.getElementById('prompt-display').innerText = node.prompt;
+
+    // Update Narrative
+    const narrativeContainer = document.getElementById('narrative-display');
+    narrativeContainer.innerHTML = '';
+    node.narrative.forEach(paragraph => {
+      const p = document.createElement('p');
+      p.innerText = paragraph;
+      narrativeContainer.appendChild(p);
+    });
+
+    // Update Choices
+    const choicesContainer = document.getElementById('choices-display');
+    choicesContainer.innerHTML = '';
+
+    node.choices.forEach(choice => {
+      if (!choice.condition || choice.condition()) {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.innerText = choice.text;
+        btn.onclick = () => {
+          playSoundEffect(choice.sfx);
+          updateUI(choice.nextNode);
+        };
+        choicesContainer.appendChild(btn);
+      }
+    });
+  }
+
+  // Initialize Game
+  updateUI('start');
+</script>
+
+</body>
+</html>
